@@ -30,17 +30,11 @@ def DoGeoIP(pkt):
 	gir = gi.record_by_addr(ip)
 
 	if gir != None:
-		out.write(
-			'\n'+
-			time.strftime("%Y-%m-%d %H:%M:%S")
-			+' - '+
-			ip
-			+' - '+
-			(gir['country_name'] or "???")
-			+' - '+
-			(gir['city'] or "???")
-			+ ' ' )
-			
+		out.write("\n%s %s %s %s "%(
+			time.strftime("%Y-%m-%d %H:%M:%S"),
+			ip,
+			gir['country_name'] or "?",
+			gir['city'] or "?"))
 		out.flush()
 		
 def process_packet(dummy, payload):
