@@ -1,12 +1,17 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 QUEUE_NUM = 5
 
-import os,sys,nfqueue,socket
-import time
+#hush verbosity
+import logging
+l=logging.getLogger("scapy.runtime")
+l.setLevel(49)
 
+import os,sys,time
+from sys import stdout as out
+import nfqueue,socket
+from scapy.all import *
 import GeoIP
-
 gi = GeoIP.open("GeoLiteCity.dat",GeoIP.GEOIP_STANDARD)
 
 
@@ -17,16 +22,27 @@ def DoGeoIP(pkt):
 	ip = pkt[IP].src
 	
 	if lastip==ip:
-		sys.stdout.write('.')
-		sys.stdout.flush()
+		out.write('.')
+		out.flush()
 		return
 		
 	lastip=ip
 	gir = gi.record_by_addr(ip)
 
 	if gir != None:
-		print(time.strftime("%Y-%m-%d %H:%M:%S"),'-',ip,'-',gir['country_name'],gir['city'])
-
+		out.write(
+			'\n'+
+			time.strftime("%Y-%m-%d %H:%M:%S")
+			+' - '+
+			ip
+			+' - '+
+			(gir['country_name'] or "???")
+			+' - '+
+			(gir['city'] or "???")
+			+ ' ' )
+			
+		out.flush()
+		
 def process_packet(dummy, payload):
 	payload.set_verdict(nfqueue.NF_ACCEPT)
 	
@@ -38,19 +54,28 @@ def process_packet(dummy, payload):
 		if pkt[ICMP].type is 8:
 			DoGeoIP(pkt)
 
+#automatic iptables rules?
+def hook():
+	pass
+def unhook():
+	pass
+	
 def main():
 	q = nfqueue.queue()
 	q.open()
 	q.bind(socket.AF_INET)
 	q.set_callback(process_packet)
 	q.create_queue(QUEUE_NUM)
-
+	
 	try:
+		hook()
 		q.try_run()
 	except KeyboardInterrupt:
-		print "Exit..."
+		unhook()
+		print("Exit...")
 		q.unbind(socket.AF_INET)
 		q.close()
-		sys.exit(1)
+		sys.exit(0)
 
+print("Listening on queue number "+str(QUEUE_NUM))
 main()
