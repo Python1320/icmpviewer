@@ -1,21 +1,13 @@
 #!/usr/bin/env python
 
-import logging
-
-l=logging.getLogger("scapy.runtime")
-l.setLevel(49)
+QUEUE_NUM = 5
 
 import os,sys,nfqueue,socket
-from scapy.all import *
 import time
 
 import GeoIP
 
 gi = GeoIP.open("GeoLiteCity.dat",GeoIP.GEOIP_STANDARD)
-
-
-conf.verbose = 0
-conf.L3socket = L3RawSocket
 
 
 lastip=""
@@ -33,9 +25,9 @@ def DoGeoIP(pkt):
 	gir = gi.record_by_addr(ip)
 
 	if gir != None:
-			print "\n",time.strftime("%Y-%m-%d %H:%M:%S"),'-',ip,'-',gir['country_name'],gir['city'],
+		print(time.strftime("%Y-%m-%d %H:%M:%S"),'-',ip,'-',gir['country_name'],gir['city'])
 
-def process(payload):
+def process_packet(dummy, payload):
 	payload.set_verdict(nfqueue.NF_ACCEPT)
 	
 	data = payload.get_data()
@@ -50,8 +42,8 @@ def main():
 	q = nfqueue.queue()
 	q.open()
 	q.bind(socket.AF_INET)
-	q.set_callback(process)
-	q.create_queue(5)
+	q.set_callback(process_packet)
+	q.create_queue(QUEUE_NUM)
 
 	try:
 		q.try_run()
